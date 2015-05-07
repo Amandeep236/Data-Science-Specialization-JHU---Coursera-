@@ -1,4 +1,5 @@
 #part 1: Finding the best hospital in a state
+source(file = "Helper.R")
 best <- function(state, outcome){
     ## Read outcome data
     data <- read.csv(file = "outcome-of-care-measures.csv", colClasses = "character")
