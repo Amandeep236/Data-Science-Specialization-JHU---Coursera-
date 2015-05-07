@@ -9,7 +9,9 @@ rankall <- function(outcome, num = "best") {
     ## (abbreviated) state name
     States <- unique(data[, "State"])
     result <- data.frame(hospital = NA, state = States)
+    #computing column number based on "outcome" input
     colnumOutcome <- selectOutColNum(outcome)
+    #computing the result for each state
     for(i in result$state){
         stateHospitals <- stateOutcomeDF(data, i, colnumOutcome)
         newNum <- numSet(num, stateHospitals)
@@ -17,6 +19,7 @@ rankall <- function(outcome, num = "best") {
         rankedHospitals <- stateHospitals[rankes, ]
         result[result$state == i, 1] <- rankedHospitals[newNum, 1]
     }
+    #reordering result according to its state name
     result <- result[order(result$state), ]
 }
 
