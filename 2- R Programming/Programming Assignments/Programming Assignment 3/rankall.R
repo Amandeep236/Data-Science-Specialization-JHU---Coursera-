@@ -11,24 +11,17 @@ rankall <- function(outcome, num = "best") {
     States <- unique(data[, "State"])
     result <- data.frame(hospital = NA, state = States)
     #computing column number based on "outcome" input
-    colnumOutcome <- selectOutColNum(outcome)   
-    #removing redundant columns
-    dataComp <- data[, c(2, 7, colnumOutcome)]
-    #removing rows with NAs
-    dataComp <- dataComp[complete.cases(dataComp), ]
-    #sorting based on states
-    dataSort <- sort(dataComp[, 2])
-    #spliting data based on state using tapply, sorting with outcome and name, returning name with rank "num"
-    tapply(dataSort, dataSort[, 2], FUN = function{
-        res <- dataComp[sort(dataComp[, 3], dataComp[ ,1]), ]
-        if(num == "best"){           
-            res[1, 1]
-        } else if(num == "worst"){
-            res[nrow(res), 1]
-        } else if(class(num) == "numeric" || class(num) == "integer"){
-            res[num, 1]
-        }
-    })
+    colnumOutcome <- selectOutColNum(outcome)
+    #computing the result for each state
+    for(i in result$state){
+        stateHospitals <- stateOutcomeDF(data, i, colnumOutcome)
+        newNum <- numSet(num, stateHospitals)
+        rankes <- order(stateHospitals$outcome, stateHospitals$name)
+        rankedHospitals <- stateHospitals[rankes, ]
+        result[result$state == i, 1] <- rankedHospitals[newNum, 1]
+    }
+    #reordering result according to its state name
+    result <- result[order(result$state), ]
 }
 
 #test cases
