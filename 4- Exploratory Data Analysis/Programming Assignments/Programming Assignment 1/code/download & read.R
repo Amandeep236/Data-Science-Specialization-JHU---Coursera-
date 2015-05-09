@@ -21,12 +21,13 @@ lastRow <- max(which(data$Date == "2/2/2007"))  #69516
 nrows <- lastRow - firstRow     #2879
 rm(data, firstRow, lastRow, nrows)
 #reading data of specified days and adding colnames to it.
-data2 <- read.table(file = "./data//household_power_consumption.txt", header = T, sep = ";", skip = 66636, nrows = 2880, na.strings = "?")
+houseData <- read.table(file = "./data//household_power_consumption.txt", header = T, sep = ";", skip = 66636, nrows = 2880, na.strings = "?")
 headerD <- read.table(file = "./data//household_power_consumption.txt", header = T, sep = ";", nrows = 1)
-colnames(data2) <- colnames(headerD)
+colnames(houseData) <- colnames(headerD)
 rm(headerD)
 
 #changing format of Date & Time columns to Date & POSIXlt
-data2$Date <- as.Date(data2$Date, format = "%d/%m/%Y")
-dateTime <- paste(data2$Date, data2$Time, sep = " ")
-data2$Time <- strptime(x = dateTime, format = "%Y-%m-%d %H:%M:%S")
+houseData$Date <- as.Date(houseData$Date, format = "%d/%m/%Y")
+dateTime <- paste(houseData$Date, houseData$Time, sep = " ")
+houseData$Time <- strptime(x = dateTime, format = "%Y-%m-%d %H:%M:%S")
+rm(houseData)
