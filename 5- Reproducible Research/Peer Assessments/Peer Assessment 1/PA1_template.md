@@ -1,9 +1,4 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
@@ -60,6 +55,22 @@ help us. We will store this measure for every day, in a data frame named dayStep
 
 ```r
 library(dplyr)
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+## 
+## The following object is masked from 'package:stats':
+## 
+##     filter
+## 
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
 daySteps <- group_by(activity, date) %>% summarize(totalSteps = sum(steps, na.rm = T))
 head(daySteps)
 ```
@@ -83,7 +94,7 @@ We can plot total steps for days easily with hist function. (We made breaks = 10
 hist(daySteps$totalSteps, breaks = 10, xlab = "Total number of steps per day", main = "Histogram of total number of steps per day")
 ```
 
-![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-4-1.png) 
 
 Calculating mean and median of total number of steps taken per day will be easily done by using mean and median functions.
 
@@ -108,7 +119,7 @@ intervalSteps <- group_by(activity, time) %>%
 plot(intervalSteps, type = "l", xlab = "Time", ylab = "Average Number of Steps", main = "Average number of steps during the day")
 ```
 
-![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-6-1.png) 
 
 We can find 5 minute interval with maximum average steps with which.max function.
 
@@ -123,7 +134,7 @@ paste(maxSteps$hour, maxSteps$min, sep = ":")
 ## [1] "8:35"
 ```
 
-As you can see, 8:35 (or 835 interval) has maximum number of steps. Its average steps is 104.
+As you can see, 8:35 (or 835 interval) has maximum number of steps. Its average steps is 206.17.
 
 ## Imputing missing values
 
@@ -197,7 +208,7 @@ dayStepsImputed <- group_by(activityImputed, date) %>% summarize(totalSteps = ro
 hist(dayStepsImputed$totalSteps, breaks = 10, xlab = "Total number of steps per day", main = "Histogram of total number of steps per day")
 ```
 
-![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-11-1.png) 
 
 ```r
 meanStepsPerDayImputed <- mean(dayStepsImputed$totalSteps)
@@ -233,7 +244,7 @@ intervalSteps2$hours <- hour(intervalSteps2$time) + minute(intervalSteps2$time)/
 xyplot(averageSteps ~ hours | dayType, data = intervalSteps2, layout = c(1, 2), type = "l", xlab = "Time (hours)", ylab = "Number of Steps", main = "Average number of steps during the day")
 ```
 
-![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-13-1.png) 
 
 It is important to note that we created a new variable named hours. That's because we wanted the x axis to be equaly
 distributed and reflect the actual measure. So this way 100 would be 1/10 hours more that 50, not twice it!

@@ -80,7 +80,7 @@ maxSteps <- as.POSIXlt(maxSteps$time)
 paste(maxSteps$hour, maxSteps$min, sep = ":")
 ```
 
-As you can see, 8:35 (or 835 interval) has maximum number of steps. Its average steps is `r which.max(intervalSteps$averageSteps)`.
+As you can see, 8:35 (or 835 interval) has maximum number of steps. Its average steps is `r round(intervalSteps[which.max(intervalSteps$averageSteps), 2], 2)`.
 
 ## Imputing missing values
 
