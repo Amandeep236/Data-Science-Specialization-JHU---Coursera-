@@ -1,0 +1,297 @@
+#Of all weather events, Tornado is most harmful to public health and Flood has the greatest economic consequences in United States
+
+##Synopsis
+
+In this report we aim to find the weahter events that have been most harmful to public health and had greatest economic consequences in United States between the years 1950 and 2011. To find these events, we obtained National Oceanic and Atmospheric Administration's (NOAA) storm database from [Coursera web page of Reproducible Research course](https://class.coursera.org/repdata-014). From these data, we found that Tornado has by far done the most harm to public health in United States, with more than 58% of total population's health damage. We also found that Flood and Hurrican/Typhoon had the greatest economic consequences in United States, with more than 33% and 19% of economic damage corresponding to property and crop damages.
+
+##Data Processing
+
+This project involves exploring National Oceanic and Atmospheric Administration's (NOAA) storm database from Coursera web page of Reproducible Research course. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+As part of data processing, we will load and clean this data set in the following sections.
+
+###Loading NOAA Storm Database
+
+First of all, we check to see if there is a folder named "data" in working directory. If this folder doesn't exist, we create it. Next we check to see if NOAA Storm Database named "repdatadataStormData.csv.bz2" exist in "data" directory and download it otherwise.
+
+```{r}
+#check and create data folder
+if(!dir.exists("./data")){dir.create("./data")}
+#check to see if "repdatadataStormData.csv.bz2" exist, and if not, dowload it
+if(!file.exists("./data//repdatadataStormData.csv.bz2")){
+    fileURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+    download.file(fileURL, destfile = "./data/repdatadataStormData.csv.bz2", method = "curl")
+    downloadTime <- date()
+}
+```
+
+When we are sure that "repdatadataStormData.csv.bz2" is in "data" folder, we read it simply using read.csv and store it in "stormDataFull" data frame.
+
+```{r, cache=TRUE}
+#reading Storm Data
+stormDataFull <- read.csv("./data/repdatadataStormData.csv.bz2")
+```
+
+###Looking at data
+
+After reading data, we will look at some summeries of it. We start by looking at its dimension.
+
+```{r}
+dim(stormDataFull)
+```
+
+We can see that it has 902297 rows and 37 columns. Now we look at its column names.
+
+```{r}
+names(stormDataFull)
+```
+
+###Preprocessing NOAA Storm Database
+
+For this data analysis, we want to answer two specific questions which concerncs about events that affect public health and economy of U.S. So we can select only the columns that relate to these questions (with REFNUM as id) and discard other columns. We will use select function from "dplyr" package for this purpose.
+
+```{r}
+library(dplyr)
+stormData <- select(stormDataFull, EVTYPE, FATALITIES:CROPDMGEXP, REFNUM)
+```
+
+
+We can look at first few rows to get a feeling of this data.
+
+```{r}
+head(stormData)
+```
+
+As we can see, each row correspond to an event and has an event type (EVTYPE) that caused fatalities (FATALITIES), injuries (INJURIES), property damage (PROPDMG times 10 to the power of PROPDMGEXP) in dollars and crop damage (CROPDMG times 10 to the power of CROPDMGEXP) in dollars.
+
+Lets look at summary and structure of this data set.
+
+```{r}
+summary(stormData)
+str(stormData)
+```
+
+Now we look deeper into PROPDMGEXP and CROPDMGEXP.
+
+```{r}
+table(stormData$PROPDMGEXP)
+table(stormData$CROPDMGEXP)
+```
+
+We want these exponential multipliers to be numbers (and in numeric type). As "K" is the most common value for both of these variables, we will impute "K" for values that don't have proper values. It is important to note that there is a probability that missing values for these multipiers were 0, which would result in 1$ multiplications, but we assume that they are equal to most common value which is "K" (x1000$).
+
+```{r}
+#changing the type of PROPDMGEXP and CROPDMGEXP to character
+stormData$PROPDMGEXP <- as.character(stormData$PROPDMGEXP)
+stormData$CROPDMGEXP <- as.character(stormData$CROPDMGEXP)
+#changing unknown exponential multiplires to the common one, which is "K"
+stormData[stormData$PROPDMGEXP %in% c("", "-", "?", "+"), "PROPDMGEXP"] <- "K"
+stormData[stormData$CROPDMGEXP %in% c("", "?"), "CROPDMGEXP"] <- "K"
+#changing abbreviations of exponential multipliers to numbers for PROPDMGEXP
+stormData[stormData$PROPDMGEXP %in% c("h", "H"), "PROPDMGEXP"] <- "2"
+stormData[stormData$PROPDMGEXP == "K", "PROPDMGEXP"] <- "3"
+stormData[stormData$PROPDMGEXP %in% c("m", "M"), "PROPDMGEXP"] <- "6"
+stormData[stormData$PROPDMGEXP == "B", "PROPDMGEXP"] <- "9"
+#changing abbreviations of exponential multipliers to numbers for CROPDMGEXP
+stormData[stormData$CROPDMGEXP %in% c("k", "K"), "CROPDMGEXP"] <- "3"
+stormData[stormData$CROPDMGEXP %in% c("m", "M"), "CROPDMGEXP"] <- "6"
+stormData[stormData$CROPDMGEXP == "B", "CROPDMGEXP"] <- "9"
+#changing the type of PROPDMGEXP and CROPDMGEXP to numeric
+stormData$PROPDMGEXP <- as.numeric(stormData$PROPDMGEXP)
+stormData$CROPDMGEXP <- as.numeric(stormData$CROPDMGEXP)
+```
+
+Now we want to clean EVTYPE, which according to [documents from NOAA](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf) should have 48 unique values. Lets look at its number of unique values.
+
+```{r}
+n_distinct(stormData$EVTYPE)
+```
+
+It has 985 unique values, so we need to do a lot of cleaning to reduce these values to the original 48 values. A quick look at this variable show that there are lots of typos in it. for cleaning this variable, I first changed all of the values to upper case and removed the starting spaces from them.
+
+```{r}
+stormData <- mutate(stormData, EVTYPE = toupper(EVTYPE))
+stormData$EVTYPE <- sub("^ +", "", x = stormData$EVTYPE)
+```
+
+After this quick fix, I worked for several hours (about 6 hours) to reduce the number of values to near 48 proper values, specified by NOAA document. My strategy was to group the "stormData" data set by "EVTYPE", then calculate number of rows for each group, arranged by both number of rows and EVTYPE name. I assumed that EVTYPE values that accured more, have higher probability that have typos in data set. So each time I looked at top of "EVTYPEnumber", and then in the "EVTYPEname" searched for patterns that might be corresponded to those top values in "EVTYPEnumber". Whenever I didn't know what a value might be, I referred to document from NOAA and searched the values in it.
+
+```{r}
+EVTYPEnumber <- group_by(stormData, EVTYPE) %>% summarize(n = n()) %>% arrange(desc(n))
+EVTYPEname <- group_by(stormData, EVTYPE) %>% summarize(n = n()) %>% arrange(EVTYPE)
+```
+
+In every cycle of the above strategy, I found a pattern and used mostly gsub to correct the pattern for one value (out of total 48 values). For example, every EVTYPE value that started with "HAIL" and "SMALL HAIL" values corresponded to "HAIL" value. This long list is for correcting incorrect patterns:
+
+```{r, cache=TRUE}
+#changing events for HAIL
+stormData$EVTYPE <- gsub("^HAIL.+|SMALL HAIL", "HAIL", x = stormData$EVTYPE)
+#changing events for THUNDERSTORM
+stormData$EVTYPE <- gsub("^TSTM", "THUNDERSTORM", x = stormData$EVTYPE)
+stormData$EVTYPE <- gsub("^THU.+|.*MICROBURST.*", "THUNDERSTORM WIND", x = stormData$EVTYPE)
+stormData$EVTYPE <- gsub("TUNDERSTORM WIND", "THUNDERSTORM WIND", x = stormData$EVTYPE)
+#changing events for TORNADO
+stormData$EVTYPE <- gsub("^TORN.+", "TORNADO", x = stormData$EVTYPE)
+#changing events for FLASH FLOOD
+stormData$EVTYPE <- gsub("^FLASH.+", "FLASH FLOOD", x = stormData$EVTYPE)
+#changing events for FLOOD
+stormData$EVTYPE <- gsub("^FLOOD.+|^RIVER.+", "FLOOD", x = stormData$EVTYPE)
+#changing events for HIGH WIND
+stormData$EVTYPE <- gsub("^HIGH.+WIND.+", "HIGH WIND", x = stormData$EVTYPE)
+#changing events for LIGHTNING
+stormData$EVTYPE <- gsub("^LIGHTNING.+|LIGHTING", "LIGHTNING", x = stormData$EVTYPE)
+#changing events for HEAVY SNOW
+stormData$EVTYPE <- gsub("^HEAVY SNOW.+|HEAVY WET SNOW|HEAVY MIX|^SNOW.*|^EXCESSIVE SNOW.*", "HEAVY SNOW", x = stormData$EVTYPE)
+#changing events for HEAVY RAIN
+stormData$EVTYPE <- gsub("^HEAVY RAIN.+|^HEAVY PRECIP.+|^HEAVY SHOWER.*", "HEAVY RAIN", x = stormData$EVTYPE)
+#changing events for WINTER STORM
+stormData$EVTYPE <- gsub("^WINTER STORM.+|^FREEZING RAIN.*|^FREEZING DRIZZLE", "WINTER STORM", x = stormData$EVTYPE)
+#changing events for WINTER WEATHER
+stormData$EVTYPE <- gsub("^WINTER WEATHER.+|^WINT.+MIX|^LIGHT SNOW.*|^MODERATE SNOW.*", "WINTER WEATHER", x = stormData$EVTYPE)
+#changing events for FUNNEL CLOUD
+stormData$EVTYPE <- gsub(".*FUNNEL.*|.*CLOUD.*", "FUNNEL CLOUD", x = stormData$EVTYPE)
+#changing TSTM in events to THUNDERSTORM
+stormData$EVTYPE <- gsub("TSTM", "THUNDERSTORM", x = stormData$EVTYPE)
+#changing events for WATERSPOUT
+stormData$EVTYPE <- gsub("^WA.*TER.+", "WATERSPOUT", x = stormData$EVTYPE)
+#changing events for STRONG WIND
+stormData$EVTYPE <- gsub("^STRONG WIND.+|^WIND|^WIND [ADGS].+|^GUSTY WIND.*", "STRONG WIND", x = stormData$EVTYPE)
+#changing events of URBAN... (small floods) to HEAVY RAIN
+stormData$EVTYPE <- gsub("^URBAN.+|^SMALL STREAM.*|^STREET FLOOD.*", "HEAVY RAIN", x = stormData$EVTYPE)
+#changing events for WILDFIRE
+stormData$EVTYPE <- gsub("^WILD.+", "WILDFIRE", x = stormData$EVTYPE)
+#changing events for BLIZZARD
+stormData$EVTYPE <- gsub("^BLIZZARD.+", "BLIZZARD", x = stormData$EVTYPE)
+#changing events for DROUGHT
+stormData$EVTYPE <- gsub("^DROUGHT.+", "DROUGHT", x = stormData$EVTYPE)
+#changing events for ICE STORM
+stormData$EVTYPE <- gsub("^ICE.*", "ICE STORM", x = stormData$EVTYPE)
+#changing events for EXCESSIVE HEAT
+stormData$EVTYPE <- gsub("EXTREME HEAT|^EXCESSIVE HEAT.+", "EXCESSIVE HEAT", x = stormData$EVTYPE)
+#changing events for HIGH SURF
+stormData$EVTYPE <- gsub(".*SURF.*|^HIGH WA|^HIGH TIDES|^HIGH.+SWELLS", "HIGH SURF", x = stormData$EVTYPE)
+#changing events for FROST/FREEZE
+stormData$EVTYPE <- gsub(".*FROST.*|^FREEZE", "FROST/FREEZE", x = stormData$EVTYPE)
+#changing events for DENSE FOG
+stormData$EVTYPE <- gsub("^FOG.*", "DENSE FOG", x = stormData$EVTYPE)
+#changing events for EXTREME COLD/WIND CHILL
+stormData$EVTYPE <- gsub("^EXTREME WIND.+|^EXTREME.* COLD.*|EXCESSIVE COLD", "EXTREME COLD/WIND CHILL", x = stormData$EVTYPE)
+#changing events for HEAT
+stormData$EVTYPE <- gsub("^HEAT.+|^UNSEASONABLY WARM|^UNSEASONABLY HOT|^UNUSUAL.*WARM|^RECORD HEAT.*|^RECORD WARM.*", "HEAT", x = stormData$EVTYPE)
+#changing events for TROPICAL STORM
+stormData$EVTYPE <- gsub("^TROPICAL STORM.+", "TROPICAL STORM", x = stormData$EVTYPE)
+#changing events for COASTAL FLOOD
+stormData$EVTYPE <- gsub("^COASTAL.*FLOOD.*|^COASTAL.*STORM", "COASTAL FLOOD", x = stormData$EVTYPE)
+#changing events for LAKE-EFFECT SNOW
+stormData$EVTYPE <- gsub(".*LAKE.* SNOW.*", "LAKE-EFFECT SNOW", x = stormData$EVTYPE)
+#changing events for LANDSLIDE (Debris Flow)
+stormData$EVTYPE <- gsub("^LAND.+", "LANDSLIDE", x = stormData$EVTYPE)
+#changing events for COLD/WIND CHILL
+stormData$EVTYPE <- gsub("^COLD.*|^COOL.*|^WIND CHILL.*|^RECORD.*COLD.*|.*LOW.*TEMP.*", "COLD/WIND CHILL", x = stormData$EVTYPE)
+#changing events for RIP CURRENT
+stormData$EVTYPE <- gsub("RIP CURRENTS", "RIP CURRENT", x = stormData$EVTYPE)
+#changing events for STORM SURGE/TIDE
+stormData$EVTYPE <- gsub("^STORM SURGE.*", "STORM SURGE/TIDE", x = stormData$EVTYPE)
+#changing events for ASTRONOMICAL LOW TIDE
+stormData$EVTYPE <- gsub(".*ASTRONOMICAL.*", "ASTRONOMICAL LOW TIDE", x = stormData$EVTYPE)
+#changing events for HURRICANE (Typhoon)
+stormData$EVTYPE <- gsub("^HURRICANE.*|^TYPHOON", "HURRICANE/TYPHOON", x = stormData$EVTYPE)
+#changing events for SLEET
+stormData$EVTYPE <- gsub("^SLEET.*", "SLEET", x = stormData$EVTYPE)
+#changing events for FREEZING FOG
+stormData$EVTYPE <- gsub("^GLAZE.*", "FREEZING FOG", x = stormData$EVTYPE)
+```
+
+So, this way we reduced the number of unique EVTYPE values.
+
+```{r}
+n_distinct(stormData$EVTYPE)
+```
+
+We can see what proportion of rows are in the most accuring values. We check first 42 values:
+
+```{r}
+#calculating percentage of cleaned data for EVTYPE
+a <- group_by(stormData, EVTYPE) %>% summarize(n = n()) %>% arrange(desc(n))
+sum(a[1:42, 2])/sum(a[, 2])
+```
+
+So, the other 305 values have less than 0.15% of rows! This is enough for cleaning the data and we assume that other 305 values corresponding to 0.15% of rows wouldn’t affect our analysis.
+
+####A more solution oriented strategy
+
+A more solution oriented strategy to clean data could be to summerize data with respect to harm to population health and damage to economy for each EVTYPE, and then do the above mentioned steps; but with optimizing our summaries (instead of number of rows). We could also assume a threshold (like 95%) for our output summary and stop the EVTYPE data cleaning at that point.
+
+While this strategy would be more efficient and capture only EVTYPE values that had great impact on our questions, that would be alot solution oriented and not a good data cleaning!
+
+##Results
+
+Our data analysis must address the following questions:
+
+1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+2. Across the United States, which types of events have the greatest economic consequences?
+
+###Question 1
+The first question is that: Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+We can group our data by EVTYPE, then make summaries of fatalities and injuries to answer this question. I hypothesize that every fatality should have 3 times effect and every injury would have 1 time effect. It's just my subjective hypothesis and by no means is an objective decision. You can make other decisions and with summarizing in other ways, continue with this analysis.
+
+```{r}
+q1StormData <- group_by(stormData, EVTYPE) %>%
+    summarize(FATALITIES = sum(FATALITIES), INJURIES = sum(INJURIES), population = sum(FATALITIES*3 + INJURIES)) %>%
+    arrange(desc(population))
+```
+
+We can look at events that are most harmful to population health (with our assumption about harmfulness criteria).
+
+```{r}
+head(q1StormData, 10)
+```
+
+First 6 events do more that 83% of the harm to population health.
+
+```{r}
+populationSum <- sum(q1StormData$population)
+sum(q1StormData$population[1:6])*100/populationSum
+```
+
+As we want to find the types of events (as indicated in the EVTYPE variable) that are most harmful with respect to population health, we will plot the percentage of harm that each event has done to population health.
+
+```{r}
+barplot(q1StormData$population[1:6]*100/populationSum, names.arg = q1StormData$EVTYPE[1:6], cex.names = 0.45, ylab = "Percentage of harm to population health", main = "Most harmful events for population health")
+```
+
+We can see that Tornado is by far the most harmful event for population health (with our criteria), with `r round(q1StormData$population[1]*100/populationSum, 2)`% of the harms, along with Exessive heat and Thundestorm wind with about `r round(q1StormData$population[2]*100/populationSum, 2)`% and `r round(q1StormData$population[3]*100/populationSum, 2)`% respectively.
+
+###Question 2
+
+The second question is that: Across the United States, which types of events have the greatest economic consequences?
+
+We can groupd our data frame by EVTYPE, then calculate damage summaries for property and crop and total economic damage, then arrange our data frame by total economic damage. Here we assume that economic consequence of an event is sum of its damage to properties and crops and we store this value in "totalDMG" variable.
+
+```{r}
+q2StormData <- group_by(stormData, EVTYPE) %>%
+    summarize(property = sum(PROPDMG*(10^PROPDMGEXP)), crop = sum(CROPDMG*(10^CROPDMGEXP)), totalDMG = sum(property + crop)) %>%
+    arrange(desc(totalDMG))
+```
+
+We can look at events that have implied the most damage to economy, with their damages in dollars.
+
+```{r}
+head(q2StormData, 10)
+```
+
+Again, first 6 events have done more than 83% of the damage to the economy.
+
+```{r}
+damageSum <- sum(q2StormData$totalDMG)
+sum(q2StormData$totalDMG[1:6])*100/damageSum
+```
+
+As we want to find the types of events that had the greatest economic consequences, we will plot the percentage of damage that each event has done to economy.
+
+```{r}
+barplot(q2StormData$totalDMG[1:6]*100/damageSum, names.arg = q2StormData$EVTYPE[1:6], cex.names = 0.5, ylab = "Percentage of damage to economy", main = "Most harmful events for economy")
+```
+
+We can see that Flood and Hurricane/Typhoon have done the most damage to economy, with `r round(q2StormData$totalDMG[1]*100/damageSum, 2)`% and `r round(q2StormData$totalDMG[2]*100/damageSum, 2)`% of damages respectively. Again, we can see that Tornado is in the third place and has done `r round(q2StormData$totalDMG[3]*100/damageSum, 2)`% of damage to economy.
