@@ -1,0 +1,57 @@
+---
+title: "Appendix of Regression Models Course Project"
+author: "Roshan Riazi"
+output: pdf_document
+---
+
+##Plot of mpg for different levels of am
+
+```{r, echo=FALSE}
+data(mtcars)
+mtcars$cyl <- as.factor(mtcars$cyl)
+mtcars$vs <- as.factor(mtcars$vs)
+mtcars$am <- as.factor(mtcars$am)
+levels(mtcars$am) <- c("automatic", "manual")
+mtcars$gear <- as.factor(mtcars$gear)
+mtcars$carb <- as.factor(mtcars$carb)
+fit.lm1 <- lm(mpg ~ am, data = mtcars)
+fit.lm2 <- lm(mpg ~ I(cyl == 6) + hp + wt + vs + am, data = mtcars)
+```
+
+```{r, fig.height=3, fig.width=3}
+plot(mpg ~ am, data = mtcars, main = "mpg for different levels of am", cex.main = .8)
+```
+
+##Residual Plots for first model
+
+```{r, fig.height=4}
+par(mfrow = c(2, 2))
+plot(fit.lm1)
+```
+
+##Pairs plot for the Most Important Variables
+
+```{r, cache=TRUE}
+library(GGally)
+ggpairs(mtcars, columns = c(1, 2, 4, 6, 8, 9), 
+        title = "Pairs Plot for the Most Important Variables")
+```
+
+##Finding the Best Linear Model
+
+```{r, fig.height=3}
+library(leaps)
+regfit.full <- regsubsets(mpg ~ ., data = mtcars, nvmax = 16)
+reg.summary <- summary(regfit.full)
+maxAdjR2 <- which.max(reg.summary$adjr2)
+#coef(regfit.full, maxAdjR2)
+plot(reg.summary$adjr2, type = "b", main = "adjr2 value for best models of different sizes")
+points(maxAdjR2, reg.summary$adjr2[maxAdjR2], col = "red", pch = 19)
+```
+
+##Residual Plots for the best model
+
+```{r, fig.height=4}
+par(mfrow = c(2, 2))
+plot(fit.lm2)
+```
