@@ -1,0 +1,186 @@
+---
+title: "Statistical Inference Course Project - Part 2 & Appendix"
+author: "Roshan Riazi"
+output: pdf_document
+---
+
+##Overview
+
+Now in the second portion of the class, we're going to analyze the ToothGrowth data in the R datasets package. So first we read the help page for ToothGrowth data and then we will perform the 4 specified steps.
+
+##ToothGrowth Data Description
+
+The response is the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods (orange juice or ascorbic acid).
+
+##Step 1
+
+In step 1, we should load the ToothGrowth data and perform some basic exploratory data analyses.
+
+First we load ToothGrowth dataset:
+
+```{r}
+library(datasets)
+data(ToothGrowth)
+```
+
+Then we can look at its structure, and change dose variable to factor.
+
+```{r}
+str(ToothGrowth)
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+```
+
+ So we make a baxplot to better see the effect of dose and supplement on length of tooth:
+
+```{r, echo=FALSE, fig.height=3}
+library(ggplot2)
+plot2 <- ggplot(ToothGrowth, aes(x = dose, y = len, fill = supp))
+plot2 <- plot2 + geom_boxplot()
+plot2 <- plot2 + labs(title = "Effect of Dose and Supplement on Length of Tooth", x = "Dose", y = "Length")
+plot2
+```
+
+There seems to be a relationship between dose and length, and some relationships between supplement and length for dose equal to 0.5 and 1.
+
+##Step 2
+
+In step 2, we should provide a basic summary of the data.
+
+We will look at its summary, and then calculate length's mean and standard deviation for the whole dataset to get a feel of its properties.
+
+```{r}
+summary(ToothGrowth)
+sd(ToothGrowth$len)
+```
+
+We can plot the seperate effect of dose on length, and the seperate effect of supplement on length.
+
+```{r, echo=FALSE, fig.height=3}
+suppressMessages(library(gridExtra))
+plot2.1 <- ggplot(ToothGrowth, aes(x = dose, y = len, fill = dose))
+plot2.1 <- plot2.1 + geom_boxplot(aes(fill = dose))
+plot2.1 <- plot2.1 + labs(x = "Dose", y = "Length")
+plot2.2 <- ggplot(ToothGrowth, aes(x = supp, y = len, fill = supp))
+plot2.2 <- plot2.2 + geom_boxplot(aes(fill = supp))
+plot2.2 <- plot2.2 + labs(x = "Supplement", y = "Length")
+grid.arrange(plot2.1, plot2.2, ncol = 2)
+```
+
+As this plot shows the seperate effect of dose and supplement on length, it will help us in developing hypothesis for step 3.
+
+Lets see the mean of length for different dose groups:
+
+```{r}
+tapply(ToothGrowth$len, INDEX = list(ToothGrowth$dose), FUN = mean)
+```
+
+In step 3 we will test to see if the difference between these means are significant or not.
+
+Lets see the mean of length for different supplement groups:
+
+```{r}
+tapply(ToothGrowth$len, INDEX = list(ToothGrowth$supp), FUN = mean)
+```
+
+Again, in step 3 we will test to see if the difference between these means are significant or not.
+
+##Step 3
+
+In step 3, we should use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose. (We should only use the techniques from class, even if there's other approaches worth considering)
+
+In each of our hypothesis tests, null hypothesis is that difference between mean of two groups is zero and alternative hypothesis is that difference between mean of two groups isn't zero.
+
+First, lets look at p-values of hypothesis tests for different dose groups.
+
+```{r, echo=FALSE}
+suppressMessages(library(dplyr))
+toothDose0.5 <- filter(ToothGrowth, dose == 0.5)
+toothDose1 <- filter(ToothGrowth, dose == 1)
+toothDose2 <- filter(ToothGrowth, dose == 2)
+t1.1 <- t.test(toothDose0.5$len, toothDose1$len)
+t1.2 <-t.test(toothDose0.5$len, toothDose2$len)
+t1.3 <- t.test(toothDose1$len, toothDose2$len)
+c("dose0.5-dose1" = t1.1$p.value, "dose0.5-dose2" = t1.2$p.value, "dose1-dose2" = t1.3$p.value)
+```
+
+Now, lets look at p-values of hypothesis test for different supplement groups.
+
+```{r}
+t2 <- t.test(len ~ supp, data = ToothGrowth)
+t2$p.value
+```
+
+##Step 4
+
+In step 4, we should state our conclusions and the assumptions needed for our conclusions.
+
+Our assumptions are:
+
+* Every group follows a normal distribution.
+* The data used to carry out the test should be sampled independently from the two populations being compared.
+* Observations in different groups are not paired.
+* Different groups can have unequal variances.
+
+Our conclusions are:
+
+* We can reject null hypothesis for the relationship between length and dose (p-value < 0.05). So there is a significant (and positive) relationship between length and dose.
+* We cannot reject null hypothesis for the relationship between length and supplement (p-value > 0.05). So there isn't a significant relationship between length and supplement in general.
+
+--------
+#Appendix
+
+
+##Codes
+
+###Looking at head of ToothGrow data in step 1
+
+```{r}
+data(ToothGrowth)
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+head(ToothGrowth)
+```
+
+###Code of first plot
+
+```{r, fig.height=3}
+library(ggplot2)
+plot2 <- ggplot(ToothGrowth, aes(x = dose, y = len, fill = supp))
+plot2 <- plot2 + geom_boxplot()
+plot2 <- plot2 + labs(title = "Effect of Dose and Supplement on Length of Tooth", x = "Dose", y = "Length")
+plot2
+```
+
+###Code of second plot
+
+```{r, fig.height=3}
+suppressMessages(library(gridExtra))
+plot2.1 <- ggplot(ToothGrowth, aes(x = dose, y = len, fill = dose))
+plot2.1 <- plot2.1 + geom_boxplot(aes(fill = dose))
+plot2.1 <- plot2.1 + labs(x = "Dose", y = "Length")
+plot2.2 <- ggplot(ToothGrowth, aes(x = supp, y = len, fill = supp))
+plot2.2 <- plot2.2 + geom_boxplot(aes(fill = supp))
+plot2.2 <- plot2.2 + labs(x = "Supplement", y = "Length")
+grid.arrange(plot2.1, plot2.2, ncol = 2)
+```
+
+###Code of p-values of hypothesis tests for different dose groups
+
+```{r}
+suppressMessages(library(dplyr))
+toothDose0.5 <- filter(ToothGrowth, dose == 0.5)
+toothDose1 <- filter(ToothGrowth, dose == 1)
+toothDose2 <- filter(ToothGrowth, dose == 2)
+t1.1 <- t.test(toothDose0.5$len, toothDose1$len)
+t1.2 <-t.test(toothDose0.5$len, toothDose2$len)
+t1.3 <- t.test(toothDose1$len, toothDose2$len)
+c("dose0.5-dose1" = t1.1$p.value, "dose0.5-dose2" = t1.2$p.value, "dose1-dose2" = t1.3$p.value)
+```
+
+###Complete results of hypothesis tests
+
+```{r}
+t1.1
+t1.2
+t1.3
+t.test(len ~ supp, data = ToothGrowth)
+```
